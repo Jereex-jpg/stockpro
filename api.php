@@ -1,4 +1,5 @@
 <?php
+session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTPS']), 'samesite' => 'Lax']);
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require 'config.php';
@@ -57,8 +58,8 @@ if ($a === 'register') {
   $q = $pdo->prepare('SELECT id FROM usuarios WHERE email = ?');
   $q->execute([$e]);
   if ($q->fetch()) err('Ese correo ya está registrado.');
-  // El primer usuario registrado es administrador
-  $rol = $pdo->query('SELECT COUNT(*) FROM usuarios')->fetchColumn() == 0 ? 'admin' : 'empleado';
+  // Todos los registros nuevos son empleados; el admin se asigna a mano en la base
+  $rol = 'empleado';
   $q = $pdo->prepare('INSERT INTO usuarios (nombre, usuario, email, password_hash, rol) VALUES (?, ?, ?, ?, ?)');
   $q->execute([$n, $u, $e, password_hash($p, PASSWORD_DEFAULT), $rol]);
   session_regenerate_id(true);
