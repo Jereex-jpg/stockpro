@@ -330,4 +330,23 @@ if ($a === 'panel') {
   out($res);
 }
 
+if ($a === 'prod_talle_add') {
+  usuario_actual($pdo);
+  $pid = (int)($d['producto_id'] ?? 0);
+  $t = mb_strtoupper(mb_substr(trim((string)($d['talle'] ?? '')), 0, 20));
+  if ($t === '') err('Escribí el talle.');
+  $q = $pdo->prepare('SELECT id FROM productos WHERE id = ? AND activo = 1');
+  $q->execute([$pid]);
+  if (!$q->fetch()) err('El producto no existe.');
+  $q = $pdo->prepare("SELECT 1 FROM producto_talles WHERE producto_id = ? AND talle = ''");
+  $q->execute([$pid]);
+  if ($q->fetch()) err('Este producto se creó sin talles.');
+  try {
+    $pdo->prepare('INSERT INTO producto_talles (producto_id, talle, stock) VALUES (?, ?, 0)')->execute([$pid, $t]);
+  } catch (PDOException $e) {
+    err($e->getCode() === '23000' ? 'Ese talle ya existe.' : 'Error en la base de datos.');
+  }
+  out(['ok' => true]);
+}
+
 err('Acción no válida.');
