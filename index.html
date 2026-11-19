@@ -230,6 +230,16 @@ var $=function(i){return document.getElementById(i)};
 var D={items:[],movs:[],provs:[],cats:[],ventas:0},me=null,editId=null,view="panel";
 function load(){try{var r=localStorage.getItem("golstock_v2");if(r)D=JSON.parse(r)}catch(e){}
 D.items=D.items||[];D.movs=D.movs||[];D.provs=D.provs||[];D.cats=D.cats||[];D.ventas=D.ventas||0;D.ganancia=D.ganancia||0}
+function refrescar(){
+return Promise.all([api("prod_list"),api("cat_list"),api("prov_list"),api("mov_list"),api("panel")]).then(function(r){
+var P=r[0],C=r[1],V=r[2],M=r[3],N=r[4];
+D.cats=(C.categorias||[]).map(function(c){return c.nombre});
+D.provs=(V.proveedores||[]).map(function(p){return {id:p.id,n:p.nombre,t:p.telefono}});
+D.items=(P.productos||[]).map(function(p){return {id:p.id,n:p.nombre,c:p.categoria,v:p.proveedor_id||0,p:p.precio,k:p.costo||0,m:p.minimo,q:p.stock,t:p.talles}});
+D.movs=(M.movimientos||[]).map(function(m){return {f:m.fecha,u:m.usuario,p:m.producto+(m.talle?" ("+m.talle+")":""),t:m.tipo,c:m.cantidad,m:m.motivo}});
+D.ventas=N.ventas_totales||0;D.ganancia=N.ganancia_ventas||0;
+});
+}
 function save(){try{localStorage.setItem("golstock_v2",JSON.stringify(D))}catch(e){}}
 function est(i){return i.q<=0?"out":(i.q<=i.m?"low":"ok")}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -391,7 +401,7 @@ function fuerza(p){var s=0;if(p.length>=8)s+=25;if(/[a-z]/.test(p)&&/[A-Z]/.test
 $("p").oninput=function(){if(modo!=="reg")return;var v=$("p").value,s=fuerza(v);$("sb").style.width=s+"%";$("sb").style.background=s<50?"var(--bad)":s<75?"var(--warn)":"var(--ok)";
 $("st").textContent=v.length<8?"Mínimo 8 caracteres (te faltan "+(8-v.length)+")":s<50?"Débil: agregá mayúsculas, números o símbolos":s<75?"Media: aceptable":"Fuerte"};
 function api(a,d){return fetch("api.php?a="+a,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d||{})}).then(function(r){return r.json()}).catch(function(){return {ok:false,error:"No se pudo conectar con el servidor. ¿Está XAMPP encendido?"}})}
-function entrarApp(u){me={n:u.usuario,r:u.rol};$("login").classList.add("hide");$("app").classList.remove("hide");$("who").textContent="Sesión: "+u.usuario+" ("+u.rol+") · v7";show("panel")}
+function entrarApp(u){me={n:u.usuario,r:u.rol};$("login").classList.add("hide");$("app").classList.remove("hide");$("who").textContent="Sesión: "+u.usuario+" ("+u.rol+")";refrescar().then(function(){show("panel")})}
 $("entrar").onclick=function(){
 var d={usuario:$("u").value.trim(),password:$("p").value};
 if(modo==="reg"){d.nombre=$("nm").value.trim();d.email=$("em").value.trim();
@@ -403,7 +413,6 @@ api(modo==="reg"?"register":"login",d).then(function(r){if(!r.ok){$("lerr").text
 $("p").onkeydown=function(e){if(e.key==="Enter")$("entrar").click()};
 $("salir").onclick=function(){api("logout").then(function(){me=null;$("app").classList.add("hide");$("login").classList.remove("hide");setModo("login")})};
 api("me").then(function(r){if(r.ok&&r.user)entrarApp(r.user)});
-load();
 })();
 </script>
 </body>
