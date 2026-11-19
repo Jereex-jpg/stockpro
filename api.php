@@ -119,11 +119,11 @@ if ($a === 'cat_edit') {
 }
 if ($a === 'cat_del') {
   usuario_actual($pdo);
-  try {
-    $pdo->prepare('DELETE FROM categorias WHERE id = ?')->execute([(int)($d['id'] ?? 0)]);
-  } catch (PDOException $e) {
-    err($e->getCode() === '23000' ? 'No se puede eliminar: la categoría tiene productos.' : 'Error en la base de datos.');
-  }
+  $id = (int)($d['id'] ?? 0);
+  $q = $pdo->prepare('SELECT COUNT(*) FROM productos WHERE categoria_id = ? AND activo = 1');
+  $q->execute([$id]);
+  if ($q->fetchColumn() > 0) err('No se puede eliminar: la categoría tiene productos.');
+  $pdo->prepare('DELETE FROM categorias WHERE id = ?')->execute([$id]);
   out(['ok' => true]);
 }
 
