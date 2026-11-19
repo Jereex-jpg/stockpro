@@ -259,4 +259,41 @@ if ($a === 'prod_del') {
   out(['ok' => true]);
 }
 
+if ($a === 'mov_add') {
+  $u = usuario_actual($pdo);
+  $tipo = $d['tipo'] ?? '';
+  if (!in_array($tipo, ['Entrada', 'Venta', 'Ajuste'], true)) err('Tipo de movimiento no válido.');
+  $n = (int)($d['cantidad'] ?? 0);
+  if ($n < 1) err('Ingresá una cantidad mayor a 0.');
+  $motivo = mb_substr(trim((string)($d['motivo'] ?? '')), 0, 200);
+  if ($tipo === 'Ajuste' && $motivo === '') err('En un ajuste el motivo es obligatorio.');
+  if ($motivo === '') $motivo = '-';
+  $talle = mb_substr(trim((string)($d['talle'] ?? '')), 0, 20);
+  $delta = $tipo === 'Entrada' ? $n : ($tipo === 'Venta' ? -$n : ((int)($d['signo'] ?? 1) < 0 ? -$n : $n));
+  $pid = (int)($d['producto_id'] ?? 0);
+  $q = $pdo->prepare('SELECT precio, costo FROM productos WHERE id = ? AND activo = 1');
+  $q->execute([$pid]);
+  $p = $q->fetch(PDO::FETCH_ASSOC);
+  if (!$p) err('El producto no existe.');
+  $q = $pdo->prepare('SELECT stock FROM producto_talles WHERE producto_id = ? AND talle = ?');
+  $q->execute([$pid, $talle]);
+  if ($q->fetch() === false) err($talle === '' ? 'Elegí un talle.' : 'Talle no válido.');
+  $pdo->beginTransaction();
+  try {
+    // El stock nunca queda en negativo: la condición va dentro del propio UPDATE
+    $s = $pdo->prepare('UPDATE producto_talles SET stock = stock + ? WHERE producto_id = ? AND talle = ? AND stock + ? >= 0');
+    $s->execute([$delta, $pid, $talle, $delta]);
+    if ($s->rowCount() === 0) { $pdo->rollBack(); err('No hay stock suficiente.'); }
+    $venta = $tipo === 'Venta';
+    $pdo->prepare('INSERT INTO movimientos (usuario_id, producto_id, talle, tipo, cantidad, motivo, precio_unit, costo_unit) VALUES (?,?,?,?,?,?,?,?)')->execute([$u['id'], $pid, $talle, $tipo, $delta, $motivo, $venta ? $p['precio'] : null, $venta ? $p['costo'] : null]);
+    $pdo->commit();
+  } catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    err('No se pudo registrar el movimiento.');
+  }
+  $q = $pdo->prepare('SELECT SUM(stock) FROM producto_talles WHERE producto_id = ?');
+  $q->execute([$pid]);
+  out(['ok' => true, 'stock_total' => (int)$q->fetchColumn()]);
+}
+
 err('Acción no válida.');
