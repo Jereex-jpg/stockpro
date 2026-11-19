@@ -296,4 +296,10 @@ if ($a === 'mov_add') {
   out(['ok' => true, 'stock_total' => (int)$q->fetchColumn()]);
 }
 
+if ($a === 'mov_list') {
+  usuario_actual($pdo);
+  $r = $pdo->query('SELECT m.id, m.fecha, u.usuario, p.nombre AS producto, m.talle, m.tipo, m.cantidad, m.motivo FROM movimientos m JOIN usuarios u ON u.id = m.usuario_id JOIN productos p ON p.id = m.producto_id ORDER BY m.id DESC LIMIT 300')->fetchAll(PDO::FETCH_ASSOC);
+  out(['ok' => true, 'movimientos' => $r]);
+}
+
 err('Acción no válida.');
