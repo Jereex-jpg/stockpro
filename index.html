@@ -195,8 +195,7 @@ th,td{padding:12px 10px}
 <section id="v-rep" class="hide"><div class="card"><h2>Reportes</h2>
 <p class="mut">Descargá o imprimí el estado actual del inventario.</p>
 <div class="row noprint"><button id="pdf">Imprimir o guardar PDF</button><button class="sec" id="csv">Descargar CSV</button></div>
-<h2 style="margin-top:16px">Datos de ejemplo</h2><p class="mut">Cargá productos, proveedores, talles y ventas de prueba para ver cómo funciona todo. Después podés vaciar y empezar de cero.</p>
-<div class="row noprint"><button id="ejemplo">Cargar datos de ejemplo</button><button class="sec" id="vaciar">Vaciar todo</button></div>
+
 <h2 style="margin-top:16px">Resumen</h2><div id="resumen"></div></div></section>
 
 <section id="v-ayuda" class="hide"><div class="card"><h2>Cómo se usa</h2>
@@ -360,20 +359,21 @@ $("tpick").innerHTML=tpickHTML();syncChips();
 function addT(){var add=$("tcus").value.split(",").map(function(x){return x.trim().toUpperCase().replace(/["'<>\\&]/g,"")}).filter(Boolean);if(!add.length)return;$("tcus").value="";var L=talleList();add.forEach(function(k){if(L.indexOf(k)<0)L.push(k)});setTalles(L)}
 $("tpick").onclick=function(e){var b=e.target.closest("button");if(!b)return;if(b.id==="tadd"){addT();return}var k=b.dataset.tp;if(!k)return;var L=talleList(),i=L.indexOf(k);if(i<0)L.push(k);else L.splice(i,1);setTalles(L)};
 $("tcus").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();addT()}};$("fcat").onchange=render;$("buscar").oninput=render;$("filtro").onchange=render;
-$("pa").onclick=function(){var n=$("pn").value.trim();if(!n)return;D.provs.push({id:Date.now(),n:n,t:$("pt").value.trim()||"-"});$("pn").value="";$("pt").value="";save();render()};
+$("pa").onclick=function(){var n=$("pn").value.trim();if(!n)return;var b=$("pa");b.disabled=true;api("prov_add",{nombre:n,telefono:$("pt").value.trim()}).then(function(r){b.disabled=false;if(!r.ok){alert(r.error);return}$("pn").value="";$("pt").value="";refrescar().then(render)})};
 $("provs").onclick=function(e){var b=e.target.closest("button");if(!b)return;
-if(b.dataset.pe){var id=+b.dataset.pe,p=D.provs.filter(function(x){return x.id===id})[0];if(!p)return;dlg("Editar proveedor","",'<label>Nombre</label><input id="en" value="'+esc(p.n)+'"><label>Teléfono</label><input id="et" value="'+esc(p.t)+'">',"Guardar",function(ov,err){var n=ov.querySelector("#en").value.trim();if(!n){err("Escribí el nombre.");return false}p.n=n;p.t=ov.querySelector("#et").value.trim()||"-";save();render()});return}
+if(b.dataset.pe){var id=+b.dataset.pe,p=D.provs.filter(function(x){return x.id===id})[0];if(!p)return;dlg("Editar proveedor","",'<label>Nombre</label><input id="en" value="'+esc(p.n)+'"><label>Teléfono</label><input id="et" value="'+esc(p.t)+'">',"Guardar",function(ov,err){var n=ov.querySelector("#en").value.trim();if(!n){err("Escribí el nombre.");return false}var btn=ov.querySelector('[data-x="o"]');btn.disabled=true;api("prov_edit",{id:id,nombre:n,telefono:ov.querySelector("#et").value.trim()}).then(function(r){if(!r.ok){btn.disabled=false;err(r.error);return}ov.remove();refrescar().then(render)});return false});return}
 var id2=+b.dataset.pd,p2=D.provs.filter(function(x){return x.id===id2})[0];if(!p2)return;
-ask("¿Quitar proveedor?","Se va a quitar «"+esc(p2.n)+"». Los productos que tenía quedan sin proveedor.",function(){D.provs=D.provs.filter(function(x){return x.id!==id2});save();render()},"Sí, quitar",true)};
-function addCat(n){n=n.trim();if(!n)return "";var e=D.cats.filter(function(c){return c.toLowerCase()===n.toLowerCase()})[0];if(e)return e;D.cats.push(n);save();return n}
-$("ca").onclick=function(){addCat($("cn").value);$("cn").value="";render()};
+ask("¿Quitar proveedor?","Se va a quitar «"+esc(p2.n)+"». Los productos que tenía quedan sin proveedor.",function(){api("prov_del",{id:id2}).then(function(r){if(!r.ok){alert(r.error);return}refrescar().then(render)})},"Sí, quitar",true)};
+function addCat(n){n=n.trim();if(!n)return Promise.resolve("");
+return api("cat_add",{nombre:n}).then(function(r){if(!r.ok){alert(r.error);return ""}return refrescar().then(function(){render();return n})})}
+$("ca").onclick=function(){var b=$("ca");b.disabled=true;addCat($("cn").value).then(function(n){b.disabled=false;if(n)$("cn").value=""})};
 $("newcat").onclick=function(){$("ncbox").classList.toggle("hide");$("ncin").focus()};
-function okCat(){var n=addCat($("ncin").value);if(!n)return;$("ncin").value="";$("ncbox").classList.add("hide");render();$("cat").value=n}
+function okCat(){addCat($("ncin").value).then(function(n){if(!n)return;$("ncin").value="";$("ncbox").classList.add("hide");$("cat").value=n})}
 $("ncok").onclick=okCat;$("ncin").onkeydown=function(e){if(e.key==="Enter")okCat()};
 $("cats").onclick=function(e){var b=e.target.closest("button");if(!b)return;
-if(b.dataset.ce){var c=b.dataset.ce;dlg("Editar categoría","",'<label>Nuevo nombre</label><input id="cn2" value="'+esc(c)+'">',"Guardar",function(ov,err){var nn=ov.querySelector("#cn2").value.trim();if(!nn){err("Escribí un nombre.");return false}if(nn===c)return;if(D.cats.some(function(x){return x!==c&&x.toLowerCase()===nn.toLowerCase()})){err("Ya existe esa categoría.");return false}D.cats=D.cats.map(function(x){return x===c?nn:x});D.items.forEach(function(i){if(i.c===c)i.c=nn});save();render()});return}
+if(b.dataset.ce){var c=b.dataset.ce;dlg("Editar categoría","",'<label>Nuevo nombre</label><input id="cn2" value="'+esc(c)+'">',"Guardar",function(ov,err){var nn=ov.querySelector("#cn2").value.trim();if(!nn){err("Escribí un nombre.");return false}if(nn===c)return;if(D.cats.some(function(x){return x!==c&&x.toLowerCase()===nn.toLowerCase()})){err("Ya existe esa categoría.");return false}var btn=ov.querySelector('[data-x="o"]');btn.disabled=true;api("cat_edit",{id:D.catIds[c],nombre:nn}).then(function(r){if(!r.ok){btn.disabled=false;err(r.error);return}ov.remove();refrescar().then(render)});return false});return}
 var c2=b.dataset.cd;if(D.items.some(function(i){return i.c===c2})){dlg("No se puede eliminar","Hay productos en la categoría «"+esc(c2)+"». Cambialos de categoría primero.","","Entendido",function(){},{noCancel:true});return}
-ask("¿Eliminar categoría?","Se va a eliminar «"+esc(c2)+"».",function(){D.cats=D.cats.filter(function(x){return x!==c2});save();render()},"Sí, eliminar",true)};
+ask("¿Eliminar categoría?","Se va a eliminar «"+esc(c2)+"».",function(){api("cat_del",{id:D.catIds[c2]}).then(function(r){if(!r.ok){alert(r.error);return}refrescar().then(render)})},"Sí, eliminar",true)};
 function ejemplo(){var f=new Date().toLocaleString("es-AR");
 return {ventas:121000,ganancia:45000,
 cats:["Pelotas","Indumentaria","Calzado","Protección","Entrenamiento"],
@@ -393,8 +393,6 @@ movs:[
 {f:f,u:"empleado",p:"Medias deportivas (M)",t:"Entrada",c:10,m:"Llegó el pedido"},
 {f:f,u:"admin",p:"Canilleras",t:"Ajuste",c:-1,m:"Se rompió una"},
 {f:f,u:"admin",p:"Pelota N°5 profesional",t:"Alta",c:22,m:"Producto nuevo"}]}}
-$("ejemplo").onclick=function(){ask("Cargar datos de ejemplo","Esto reemplaza los datos actuales por datos de ejemplo.",function(){D=ejemplo();save();render()},"Cargar")};
-$("vaciar").onclick=function(){ask("¿Vaciar todo?","Se borran productos, proveedores, categorías y movimientos.",function(){D={items:[],movs:[],provs:[],cats:[],ventas:0,ganancia:0};save();render()},"Sí, vaciar todo",true)};
 $("pdf").onclick=function(){window.print()};
 $("csv").onclick=function(){var t="Producto,Categoría,Stock,Mínimo,Precio\n"+D.items.map(function(i){return [i.n,i.c,i.q,i.m,i.p].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(",")}).join("\n");
 var w=window.open("","_blank");if(w)w.document.write("<pre>"+esc(t)+"</pre>")};
@@ -406,7 +404,7 @@ $("tl").onclick=function(){setModo("login")};$("tr").onclick=function(){setModo(
 function fuerza(p){var s=0;if(p.length>=8)s+=25;if(/[a-z]/.test(p)&&/[A-Z]/.test(p))s+=25;if(/\d/.test(p))s+=25;if(/[^A-Za-z0-9]/.test(p))s+=25;return s}
 $("p").oninput=function(){if(modo!=="reg")return;var v=$("p").value,s=fuerza(v);$("sb").style.width=s+"%";$("sb").style.background=s<50?"var(--bad)":s<75?"var(--warn)":"var(--ok)";
 $("st").textContent=v.length<8?"Mínimo 8 caracteres (te faltan "+(8-v.length)+")":s<50?"Débil: agregá mayúsculas, números o símbolos":s<75?"Media: aceptable":"Fuerte"};
-function api(a,d){return fetch("api.php?a="+a,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d||{})}).then(function(r){return r.json()}).catch(function(){return {ok:false,error:"No se pudo conectar con el servidor. ¿Está XAMPP encendido?"}})}
+function api(a,d){return fetch("api.php?a="+a,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d||{})}).then(function(r){return r.json().then(function(j){if(r.status===401&&a!=="login"&&a!=="register"&&a!=="me"){alert("La sesión venció. Volvé a entrar.");location.reload()}return j})}).catch(function(){return {ok:false,error:"No se pudo conectar con el servidor. ¿Está encendido?"}})}
 function entrarApp(u){me={n:u.usuario,r:u.rol};$("login").classList.add("hide");$("app").classList.remove("hide");$("who").textContent="Sesión: "+u.usuario+" ("+u.rol+")";refrescar().then(function(){show("panel")})}
 $("entrar").onclick=function(){
 var d={usuario:$("u").value.trim(),password:$("p").value};
