@@ -154,4 +154,52 @@ if ($a === 'prov_del') {
   out(['ok' => true]);
 }
 
+//  PRODUCTOS
+if ($a === 'prod_add') {
+  $u = usuario_actual($pdo);
+  $n = nombre_valido($d['nombre'] ?? '', 120);
+  $cat = (int)($d['categoria_id'] ?? 0);
+  $prov = (int)($d['proveedor_id'] ?? 0) ?: null;
+  $precio = max(0, (float)($d['precio'] ?? 0));
+  // El costo solo lo define el admin; el del empleado se ignora
+  $costo = $u['rol'] === 'admin' ? max(0, (float)($d['costo'] ?? 0)) : 0;
+  $min = max(0, (int)($d['minimo'] ?? 5));
+  // Stock inicial: una fila por talle (sin talles: una sola fila con talle vacío)
+  $filas = [];
+  if (!empty($d['talles']) && is_array($d['talles'])) {
+    foreach ($d['talles'] as $t => $c) {
+      $t = mb_substr(trim((string)$t), 0, 20);
+      if ($t === '') continue;
+      $filas[$t] = max(0, (int)$c);
+    }
+  }
+  if (!$filas) $filas[''] = max(0, (int)($d['stock'] ?? 0));
+  $q = $pdo->prepare('SELECT id FROM categorias WHERE id = ?');
+  $q->execute([$cat]);
+  if (!$q->fetch()) err('Elegí una categoría válida.');
+  if ($prov) {
+    $q = $pdo->prepare('SELECT id FROM proveedores WHERE id = ?');
+    $q->execute([$prov]);
+    if (!$q->fetch()) err('Proveedor no válido.');
+  }
+  $pdo->beginTransaction();
+  try {
+    $pdo->prepare('INSERT INTO productos (nombre, categoria_id, proveedor_id, precio, costo, minimo) VALUES (?,?,?,?,?,?)')->execute([$n, $cat, $prov, $precio, $costo, $min]);
+    $pid = $pdo->lastInsertId();
+    $ins = $pdo->prepare('INSERT INTO producto_talles (producto_id, talle, stock) VALUES (?,?,?)');
+    $mv = $pdo->prepare("INSERT INTO movimientos (usuario_id, producto_id, talle, tipo, cantidad, motivo) VALUES (?,?,?, 'Alta', ?, 'Producto nuevo')");
+    $hubo = false;
+    foreach ($filas as $t => $c) {
+      $ins->execute([$pid, (string)$t, $c]);
+      if ($c > 0) { $mv->execute([$u['id'], $pid, (string)$t, $c]); $hubo = true; }
+    }
+    if (!$hubo) $mv->execute([$u['id'], $pid, (string)array_key_first($filas), 0]);
+    $pdo->commit();
+  } catch (Exception $e) {
+    $pdo->rollBack();
+    err('No se pudo guardar el producto.');
+  }
+  out(['ok' => true, 'id' => $pid]);
+}
+
 err('Acción no válida.');
