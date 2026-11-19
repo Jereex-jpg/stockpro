@@ -302,4 +302,32 @@ if ($a === 'mov_list') {
   out(['ok' => true, 'movimientos' => $r]);
 }
 
+if ($a === 'panel') {
+  $u = usuario_actual($pdo);
+  $tot = $pdo->query('SELECT COUNT(DISTINCT p.id) AS productos, COALESCE(SUM(t.stock),0) AS unidades FROM productos p JOIN producto_talles t ON t.producto_id = p.id WHERE p.activo = 1')->fetch(PDO::FETCH_ASSOC);
+  $porcat = $pdo->query('SELECT c.nombre AS categoria, COALESCE(SUM(t.stock),0) AS unidades FROM categorias c LEFT JOIN productos p ON p.categoria_id = c.id AND p.activo = 1 LEFT JOIN producto_talles t ON t.producto_id = p.id GROUP BY c.id, c.nombre ORDER BY c.nombre')->fetchAll(PDO::FETCH_ASSOC);
+  foreach ($porcat as &$c) { $c['unidades'] = (int)$c['unidades']; }
+  unset($c);
+  // A reponer: stock total en el mínimo o por debajo, o algún talle agotado
+  $rep = $pdo->query('SELECT p.id, p.nombre, p.minimo, SUM(t.stock) AS stock, SUM(t.stock <= 0) AS talles_agotados FROM productos p JOIN producto_talles t ON t.producto_id = p.id WHERE p.activo = 1 GROUP BY p.id, p.nombre, p.minimo HAVING SUM(t.stock) <= p.minimo OR (COUNT(*) > 1 AND SUM(t.stock <= 0) > 0) ORDER BY p.nombre')->fetchAll(PDO::FETCH_ASSOC);
+  foreach ($rep as &$r) {
+    $r['minimo'] = (int)$r['minimo'];
+    $r['stock'] = (int)$r['stock'];
+    $r['talles_agotados'] = (int)$r['talles_agotados'];
+  }
+  unset($r);
+  $res = ['ok' => true, 'productos' => (int)$tot['productos'], 'unidades' => (int)$tot['unidades'], 'por_categoria' => $porcat, 'reponer' => $rep];
+  // Valor, costo, ventas y ganancias: solo el admin
+  if ($u['rol'] === 'admin') {
+    $v = $pdo->query('SELECT COALESCE(SUM(t.stock * p.precio),0) AS valor, COALESCE(SUM(t.stock * p.costo),0) AS costo FROM productos p JOIN producto_talles t ON t.producto_id = p.id WHERE p.activo = 1')->fetch(PDO::FETCH_ASSOC);
+    $m = $pdo->query("SELECT COALESCE(SUM(-cantidad * precio_unit),0) AS ventas, COALESCE(SUM(-cantidad * (precio_unit - costo_unit)),0) AS ganancia FROM movimientos WHERE tipo = 'Venta'")->fetch(PDO::FETCH_ASSOC);
+    $res['valor_stock'] = (float)$v['valor'];
+    $res['costo_stock'] = (float)$v['costo'];
+    $res['ganancia_potencial'] = (float)$v['valor'] - (float)$v['costo'];
+    $res['ventas_totales'] = (float)$m['ventas'];
+    $res['ganancia_ventas'] = (float)$m['ganancia'];
+  }
+  out($res);
+}
+
 err('Acción no válida.');
