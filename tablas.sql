@@ -1,0 +1,48 @@
+CREATE TABLE IF NOT EXISTS categorias (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(60) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS proveedores (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL,
+  telefono VARCHAR(40) NOT NULL DEFAULT '-'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS productos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(120) NOT NULL,
+  categoria_id INT NOT NULL,
+  proveedor_id INT NULL,
+  precio DECIMAL(12,2) NOT NULL DEFAULT 0,
+  costo DECIMAL(12,2) NOT NULL DEFAULT 0,
+  minimo INT NOT NULL DEFAULT 5,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  FOREIGN KEY (categoria_id) REFERENCES categorias(id),
+  FOREIGN KEY (proveedor_id) REFERENCES proveedores(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS producto_talles (
+  producto_id INT NOT NULL,
+  talle VARCHAR(20) NOT NULL DEFAULT '',
+  stock INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (producto_id, talle),
+  CHECK (stock >= 0),
+  FOREIGN KEY (producto_id) REFERENCES productos(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS movimientos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  usuario_id INT NOT NULL,
+  producto_id INT NOT NULL,
+  talle VARCHAR(20) NOT NULL DEFAULT '',
+  tipo ENUM('Alta','Entrada','Venta','Ajuste') NOT NULL,
+  cantidad INT NOT NULL,
+  motivo VARCHAR(200) NOT NULL DEFAULT '-',
+  precio_unit DECIMAL(12,2) NULL,
+  costo_unit DECIMAL(12,2) NULL,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  FOREIGN KEY (producto_id) REFERENCES productos(id),
+  INDEX (fecha)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
