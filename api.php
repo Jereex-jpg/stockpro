@@ -202,4 +202,26 @@ if ($a === 'prod_add') {
   out(['ok' => true, 'id' => $pid]);
 }
 
+if ($a === 'prod_list') {
+  $u = usuario_actual($pdo);
+  $es_admin = $u['rol'] === 'admin';
+  $prods = $pdo->query('SELECT p.id, p.nombre, p.categoria_id, c.nombre AS categoria, p.proveedor_id, pr.nombre AS proveedor, p.precio, p.costo, p.minimo FROM productos p JOIN categorias c ON c.id = p.categoria_id LEFT JOIN proveedores pr ON pr.id = p.proveedor_id WHERE p.activo = 1 ORDER BY p.nombre')->fetchAll(PDO::FETCH_ASSOC);
+  $tal = [];
+  foreach ($pdo->query('SELECT t.producto_id, t.talle, t.stock FROM producto_talles t JOIN productos p ON p.id = t.producto_id WHERE p.activo = 1 ORDER BY t.talle') as $r) {
+    $tal[$r['producto_id']][$r['talle']] = (int)$r['stock'];
+  }
+  foreach ($prods as &$p) {
+    $filas = $tal[$p['id']] ?? [];
+    $p['stock'] = array_sum($filas);
+    // Sin talles: null. Con talles: {"M":6,"L":0,...}
+    $p['talles'] = (count($filas) === 1 && isset($filas[''])) ? null : $filas;
+    $p['precio'] = (float)$p['precio'];
+    $p['minimo'] = (int)$p['minimo'];
+    if ($es_admin) $p['costo'] = (float)$p['costo'];
+    else unset($p['costo']);
+  }
+  unset($p);
+  out(['ok' => true, 'productos' => $prods]);
+}
+
 err('Acción no válida.');
