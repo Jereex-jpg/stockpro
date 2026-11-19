@@ -224,4 +224,31 @@ if ($a === 'prod_list') {
   out(['ok' => true, 'productos' => $prods]);
 }
 
+if ($a === 'prod_edit') {
+  $u = usuario_actual($pdo);
+  $id = (int)($d['id'] ?? 0);
+  $n = nombre_valido($d['nombre'] ?? '', 120);
+  $cat = (int)($d['categoria_id'] ?? 0);
+  $prov = (int)($d['proveedor_id'] ?? 0) ?: null;
+  $min = max(0, (int)($d['minimo'] ?? 5));
+  $q = $pdo->prepare('SELECT id FROM productos WHERE id = ? AND activo = 1');
+  $q->execute([$id]);
+  if (!$q->fetch()) err('El producto no existe.');
+  $q = $pdo->prepare('SELECT id FROM categorias WHERE id = ?');
+  $q->execute([$cat]);
+  if (!$q->fetch()) err('Elegí una categoría válida.');
+  if ($prov) {
+    $q = $pdo->prepare('SELECT id FROM proveedores WHERE id = ?');
+    $q->execute([$prov]);
+    if (!$q->fetch()) err('Proveedor no válido.');
+  }
+  $pdo->prepare('UPDATE productos SET nombre = ?, categoria_id = ?, proveedor_id = ?, minimo = ? WHERE id = ?')->execute([$n, $cat, $prov, $min, $id]);
+  // Precio y costo: solo el admin (si el empleado los manda, se ignoran)
+  if ($u['rol'] === 'admin') {
+    if (isset($d['precio'])) $pdo->prepare('UPDATE productos SET precio = ? WHERE id = ?')->execute([max(0, (float)$d['precio']), $id]);
+    if (isset($d['costo'])) $pdo->prepare('UPDATE productos SET costo = ? WHERE id = ?')->execute([max(0, (float)$d['costo']), $id]);
+  }
+  out(['ok' => true]);
+}
+
 err('Acción no válida.');
