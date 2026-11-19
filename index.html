@@ -262,19 +262,22 @@ var h="";
 if(tk)h+='<label>Talle</label><div class="chips">'+tk.map(function(k){return '<button type="button" class="chip" data-k="'+esc(k)+'">'+esc(k)+' <small class="'+(it.t[k]<=0?"out":"")+'">('+it.t[k]+')</small></button>'}).join("")+'</div>';
 if(a==="adj")h+='<div class="seg2"><button type="button" class="chip on" data-sg="1">Sumar</button><button type="button" class="chip" data-sg="-1">Restar</button></div>';
 h+='<label>Cantidad</label><div class="step"><button type="button" class="sec" data-st="-1">−</button><input id="mq" type="number" min="1" value="1"><button type="button" class="sec" data-st="1">+</button></div>';
-h+='<label>Motivo (opcional)</label><input id="mm" placeholder="'+T[2]+'"><div class="sum" id="ms"></div>';
+h+='<label>Motivo (obligatorio en ajustes)</label><input id="mm" placeholder="'+T[2]+'"><div class="sum" id="ms"></div>';
 function have(){return tk?(sel?it.t[sel]:null):it.q}
 var ov=dlg(T[0],"<b>"+esc(it.n)+"</b> · Stock actual: "+it.q,h,T[1],function(ov,err){
 var n=parseInt(ov.querySelector("#mq").value)||0,hv=have();
 if(tk&&!sel){err("Elegí un talle.");return false}
 if(n<1){err("Ingresá una cantidad mayor a 0.");return false}
 if(a==="sale"&&n>hv){err("No hay stock suficiente. Disponible: "+hv);return false}
-var dlt=a==="sale"?-n:(a==="adj"?sg*n:n);if(a==="adj"&&hv+dlt<0)dlt=-hv;
-if(!dlt){err("No hay nada para ajustar.");return false}
-if(tk){it.t[sel]=hv+dlt;it.q=Object.keys(it.t).reduce(function(x,k){return x+it.t[k]},0)}else{it.q=hv+dlt}
-if(a==="sale"){D.ventas+=n*it.p;D.ganancia=(D.ganancia||0)+n*(it.p-(it.k||0))}
-mov({n:it.n+(sel?" ("+sel+")":"")},a==="in"?"Entrada":a==="sale"?"Venta":"Ajuste",dlt,ov.querySelector("#mm").value.trim());
-save();render()});
+var dlt=a==="sale"?-n:(a==="adj"?sg*n:n);
+if(a==="adj"&&hv+dlt<0){err("No se puede dejar el stock en negativo.");return false}
+var motivo=ov.querySelector("#mm").value.trim();
+if(a==="adj"&&!motivo){err("En un ajuste el motivo es obligatorio.");return false}
+var btn=ov.querySelector('[data-x="o"]');btn.disabled=true;
+api("mov_add",{producto_id:it.id,tipo:a==="in"?"Entrada":a==="sale"?"Venta":"Ajuste",cantidad:n,signo:sg,talle:sel||"",motivo:motivo}).then(function(r){
+if(!r.ok){btn.disabled=false;err(r.error);return}
+ov.remove();refrescar().then(render)});
+return false});
 function upd(){var n=Math.max(0,parseInt(ov.querySelector("#mq").value)||0),hv=have(),t;
 if(tk&&!sel)t="Elegí un talle para continuar.";
 else{var d=a==="sale"?-n:(a==="adj"?sg*n:n);t="Stock: "+hv+" → quedará <b>"+Math.max(0,hv+d)+"</b>";
