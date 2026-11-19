@@ -251,4 +251,12 @@ if ($a === 'prod_edit') {
   out(['ok' => true]);
 }
 
+if ($a === 'prod_del') {
+  exigir_admin(usuario_actual($pdo));
+  $q = $pdo->prepare('UPDATE productos SET activo = 0 WHERE id = ? AND activo = 1');
+  $q->execute([(int)($d['id'] ?? 0)]);
+  if ($q->rowCount() === 0) err('El producto no existe.');
+  out(['ok' => true]);
+}
+
 err('Acción no válida.');
