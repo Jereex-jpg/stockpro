@@ -12,13 +12,13 @@ CREATE TABLE IF NOT EXISTS proveedores (
 CREATE TABLE IF NOT EXISTS productos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(120) NOT NULL,
-  categoria_id INT NOT NULL,
+  categoria_id INT NULL,
   proveedor_id INT NULL,
   precio DECIMAL(12,2) NOT NULL DEFAULT 0,
   costo DECIMAL(12,2) NOT NULL DEFAULT 0,
   minimo INT NOT NULL DEFAULT 5,
   activo TINYINT(1) NOT NULL DEFAULT 1,
-  FOREIGN KEY (categoria_id) REFERENCES categorias(id),
+  FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL,
   FOREIGN KEY (proveedor_id) REFERENCES proveedores(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
