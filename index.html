@@ -200,10 +200,10 @@ th,td{padding:12px 10px}
 
 <section id="v-ayuda" class="hide"><div class="card"><h2>Cómo se usa</h2>
 <ol>
-<li><b>Ingresar:</b> registrate con tu correo y después entrá con tu usuario o correo. El administrador ve todo; el empleado mueve stock y crea categorías.</li>
+<li><b>Ingresar:</b> registrate con tu correo y después entrá con tu usuario o correo. Las cuentas nuevas son de empleado; el rol de administrador se asigna en la base de datos.</li>
 <li><b>Panel:</b> muestra totales, alertas de faltante y un gráfico por categoría.</li>
-<li><b>Inventario:</b> se agregan y editan productos (solo el administrador puede eliminarlos). Cada producto tiene un mínimo: si el stock llega a ese número, aparece “Bajo”.</li>
-<li><b>Movimientos:</b> con los botones Entrada, Venta y Ajuste se cambia el stock y queda registrado quién, cuándo y por qué.</li>
+<li><b>Inventario:</b> se agregan y editan productos (solo el administrador cambia precios y costos y puede eliminarlos). La cantidad no se edita: cambia con Entrada, Venta o Ajuste. Cada producto tiene un mínimo: si el stock llega a ese número, aparece “Bajo”.</li>
+<li><b>Movimientos:</b> con los botones Entrada, Venta y Ajuste se cambia el stock y queda registrado quién, cuándo y por qué. En los ajustes el motivo es obligatorio.</li>
 <li><b>Categorías:</b> cualquier usuario puede crear, editar o eliminar categorías (no se puede eliminar una que tenga productos).</li>
 <li><b>Talles:</b> al cargar un producto escribí los talles (S, M, L) y la cantidad de cada uno. Al hacer Entrada, Venta o Ajuste te pregunta de qué talle.</li>
 <li><b>Reposición:</b> lista lo que hay que reponer. Los empleados reponen con el botón Reponer; el administrador carga costos y ve las ganancias en el Panel.</li>
@@ -211,15 +211,13 @@ th,td{padding:12px 10px}
 <li><b>Reportes:</b> imprimir o guardar en PDF, y descargar CSV para Excel.</li>
 </ol></div>
 <div class="card"><h2>Qué hace cada rol</h2>
-<p><b>Empleado</b> (atiende y repone):</p><ul><li>Agrega y edita productos, proveedores y categorías.</li><li>Registra ventas, entradas y ajustes de stock.</li><li>Usa la pestaña Reposición para ver qué falta y reponerlo.</li><li>No ve costos, ganancias ni reportes, y no elimina productos ni proveedores.</li></ul>
-<p><b>Administrador</b> (el dueño):</p><ul><li>Hace todo lo del empleado, y además:</li><li>Carga el costo de cada producto y ve costos, ganancias y reportes.</li><li>Elimina productos y proveedores.</li></ul></div>
-<div class="card"><h2>Probalo con el ejemplo</h2><ol>
-<li>Entrá como administrador, andá a Reportes y tocá <b>Cargar datos de ejemplo</b>.</li>
-<li>Mirá el Panel: ahí están el costo, la ganancia y las alertas.</li>
-<li>En Inventario fijate la camiseta: tiene talles y el talle L está en 0, pero el producto no figura sin stock.</li>
-<li>Cerrá sesión y entrá como empleado: no ves Reportes ni costos ni ganancias, pero sí podés agregar y editar productos.</li>
-<li>Como empleado, hacé una Venta de una camiseta talle M y después una Entrada de talle L desde Reposición.</li>
-<li>Volvé a entrar como administrador y mirá Movimientos: aparecen con + o − y quién lo hizo.</li></ol></div></section>
+<p><b>Empleado</b> (atiende y repone):</p><ul><li>Agrega y edita productos (sin cambiar precios), proveedores y categorías.</li><li>Registra ventas, entradas y ajustes de stock.</li><li>Usa la pestaña Reposición para ver qué falta y reponerlo.</li><li>No ve costos, ganancias ni reportes, y no elimina productos ni proveedores.</li></ul>
+<p><b>Administrador</b> (el dueño):</p><ul><li>Hace todo lo del empleado, y además:</li><li>Define precios y costos, y ve costos, ganancias y reportes.</li><li>Elimina productos y proveedores.</li></ul></div>
+<div class="card"><h2>Probalo paso a paso</h2><ol>
+<li>Entrá como administrador y mirá el Panel: ahí están los costos y las ganancias.</li>
+<li>En Inventario, hacé una Venta de una camiseta talle M y después una Entrada de talle XL (el XL aparece en Reposición porque está en cero).</li>
+<li>En Movimientos aparecen con + o − y quién lo hizo.</li>
+<li>Cerrá sesión y entrá como empleado: no ve Reportes, costos ni ganancias, y no puede cambiar precios ni eliminar productos.</li></ol></div></section>
 </div>
 </main>
 
