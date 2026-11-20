@@ -333,7 +333,7 @@ document.querySelectorAll(".adm").forEach(function(e){e.classList.toggle("hide",
 function acc(e){var b=e.target.closest("button");if(!b)return;var id=+b.dataset.id,a=b.dataset.a,it=D.items.filter(function(x){return x.id===id})[0];if(!it)return;
 if(a==="in"||a==="sale"||a==="adj"){movModal(it,a);return}
 if(a==="del"){ask("¿Eliminar producto?","Se va a eliminar «"+esc(it.n)+"». Esta acción no se puede deshacer.",function(){api("prod_del",{id:id}).then(function(r){if(!r.ok){alert(r.error);return}refrescar().then(render)})},"Sí, eliminar",true);return}
-if(a==="edit"){editId=id;$("nombre").value=it.n;$("cat").value=it.c;$("cant").value=it.q;$("min").value=it.m;$("precio").value=it.p;$("costo").value=it.k||0;$("prov").value=it.v;$("talles").value=it.t?Object.keys(it.t).join(", "):"";renderTq(it.t||{});$("ft").textContent="Editar producto";$("cancelar").classList.remove("hide");window.scrollTo(0,0)}
+if(a==="edit"){editId=id;$("precio").disabled=!adm();$("cant").disabled=true;$("nombre").value=it.n;$("cat").value=it.c;$("cant").value=it.q;$("min").value=it.m;$("precio").value=it.p;$("costo").value=it.k||0;$("prov").value=it.v;$("talles").value=it.t?Object.keys(it.t).join(", "):"";renderTq(it.t||{});$("ft").textContent="Editar producto";$("cancelar").classList.remove("hide");window.scrollTo(0,0)}
 save();render()}
 $("lista").onclick=acc;$("repl").onclick=acc;
 function closeMenus(){document.querySelectorAll(".dd-m").forEach(function(m){m.classList.add("hide")})}
@@ -344,7 +344,7 @@ if(was){m.classList.remove("hide");var q=b.getBoundingClientRect(),h=m.offsetHei
 if(t+h>window.innerHeight-8)t=Math.max(8,q.top-h-4);
 m.style.top=t+"px";m.style.left=Math.max(8,Math.min(q.right-w,window.innerWidth-w-8))+"px"}});
 window.addEventListener("scroll",closeMenus,true);
-function rst(){editId=null;$("nombre").value="";$("cat").selectedIndex=0;$("cant").value=0;$("min").value=5;$("precio").value=0;$("costo").value=0;$("talles").value="";renderTq();$("ft").textContent="Agregar producto";$("cancelar").classList.add("hide")}
+function rst(){editId=null;$("precio").disabled=false;$("cant").disabled=false;$("nombre").value="";$("cat").selectedIndex=0;$("cant").value=0;$("min").value=5;$("precio").value=0;$("costo").value=0;$("talles").value="";renderTq();$("ft").textContent="Agregar producto";$("cancelar").classList.add("hide")}
 $("guardar").onclick=function(){
 var n=$("nombre").value.trim();if(!n){$("msg").textContent="Escribí el nombre del producto.";return}
 var cid=D.catIds[$("cat").value];if(!cid){$("msg").textContent="Elegí una categoría.";return}
@@ -352,8 +352,13 @@ var d={nombre:n,categoria_id:cid,proveedor_id:+$("prov").value||0,minimo:Math.ma
 if(editId){d.id=editId;ruta="prod_edit"}
 else{ruta="prod_add";if(talleList().length){d.talles={};Array.prototype.forEach.call($("tq").querySelectorAll("input"),function(e){d.talles[e.dataset.t]=Math.max(0,parseInt(e.value)||0)})}else{d.stock=Math.max(0,parseInt($("cant").value)||0)}}
 var btn=$("guardar");btn.disabled=true;
-api(ruta,d).then(function(r){btn.disabled=false;if(!r.ok){$("msg").textContent=r.error;return}
-var ed=!!editId;rst();$("msg").textContent=ed?"Producto actualizado. El stock se cambia con Entrada, Venta o Ajuste.":"Producto agregado.";refrescar().then(render)})};
+var eid=editId,nuevos=[];
+if(eid){var cur=D.items.filter(function(x){return x.id===eid})[0],ya=cur&&cur.t?Object.keys(cur.t):[];nuevos=talleList().filter(function(k){return ya.indexOf(k)<0})}
+api(ruta,d).then(function(r){
+if(!r.ok)return r;
+return nuevos.reduce(function(p,k){return p.then(function(x){return x.ok?api("prod_talle_add",{producto_id:eid,talle:k}):x})},Promise.resolve(r))
+}).then(function(r){btn.disabled=false;if(!r.ok){$("msg").textContent=r.error;refrescar().then(render);return}
+var ed=!!eid;rst();$("msg").textContent=ed?"Producto actualizado. El stock se cambia con Entrada, Venta o Ajuste.":"Producto agregado.";refrescar().then(render)})};
 $("cancelar").onclick=function(){rst();$("msg").textContent=""};
 $("tpick").innerHTML=tpickHTML();syncChips();
 function addT(){var add=$("tcus").value.split(",").map(function(x){return x.trim().toUpperCase().replace(/["'<>\\&]/g,"")}).filter(Boolean);if(!add.length)return;$("tcus").value="";var L=talleList();add.forEach(function(k){if(L.indexOf(k)<0)L.push(k)});setTalles(L)}
